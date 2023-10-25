@@ -10,7 +10,7 @@ st.set_page_config(
 st.title("Penny: Football Play Analysis Tool")
 
 # Create two columns
-left_column, right_column = st.beta_columns(2)
+left_column, right_column = st.columns(2)
 
 # Inputs in the left column
 
