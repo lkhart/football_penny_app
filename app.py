@@ -2,7 +2,6 @@ import streamlit as st
 from streamlit_image_coordinates import streamlit_image_coordinates 
 
 
-# Custom Theme for the company's colors
 st.set_page_config(
     page_title="Penny: Football Play Analysis Tool",
     layout="wide",
@@ -11,6 +10,11 @@ st.set_page_config(
 
 # Streamlit App
 st.title("Penny: Football Play Analysis Tool")
+
+# Create two columns
+left_column, right_column = st.columns(2)
+
+# Inputs in the left column
 
 def transform_to_field_coordinates(x, y, image_width, image_height):
     # constants for football field dimensions
@@ -145,9 +149,9 @@ st.write("Play art result (placeholder)")
 st.image("https://via.placeholder.com/300")  # Placeholder, replace with actual play art
 
 # Interface for analyzing NFL play-by-play data
-st.subheader("NFL Play-by-Play Analysis")
-team = st.selectbox("Select NFL Team:", ["Team A", "Team B", "Team C"], index=0)  # Placeholder team names
-week = st.selectbox("Select Week:", list(range(1, 18)))
+left_column.subheader("NFL Play-by-Play Analysis")
+team = left_column.selectbox("Select NFL Team:", ["Team A", "Team B", "Team C"], index=0)  # Placeholder team names
+week = left_column.selectbox("Select Week:", list(range(1, 18)))
 
 if st.button("Fetch and Analyze Data"):
     st.write(f"Fetching data for {team} for week {week}... (this is a placeholder)")
