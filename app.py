@@ -2,6 +2,20 @@ import streamlit as st
 from streamlit_image_coordinates import streamlit_image_coordinates 
 
 
+
+
+
+# initialize database connection
+
+conn = st.connection('mysql', type='sql')
+
+# test query
+df = conn.query('SELECT * from games limit 10;', ttl=600)
+
+write(df)
+
+
+
 st.set_page_config(
     page_title="Penny: Football Play Analysis Tool",
     layout="wide",
