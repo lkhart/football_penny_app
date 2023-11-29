@@ -10,3 +10,4 @@ matplotlib;
 scipy;
 shapely == 2.0.2;
 pillow;
+plotly;
