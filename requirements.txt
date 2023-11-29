@@ -6,7 +6,6 @@ streamlit-image-coordinates;
 pymysql;
 pandas;
 requests;
-io;
 matplotlib;
 scipy;
 shapely;

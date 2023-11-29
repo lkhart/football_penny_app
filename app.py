@@ -1,11 +1,11 @@
 import streamlit as st
 from streamlit_image_coordinates import streamlit_image_coordinates 
-from sqlalchemy import create_engine
+# from sqlalchemy import create_engine
 from urllib.parse import quote
 import requests
-import pymysql
+# import pymysql
 import utils
-import optimization_logic as ol
+import by_second as ol
 from PIL import Image, ImageDraw
 from io import BytesIO
 
