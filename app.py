@@ -141,11 +141,10 @@ def format_and_create_offensive_players():
             offensive_players.append(offensive_player)
     return offensive_players
 
-def plot_players_at_time_newversion(t, receivers, best_actions):
+def plot_players_at_time_newversion(t, receivers, best_actions, defensive_players):
     fig, ax = plt.subplots(figsize=(8, 5))
     # Plotting receivers
     for idx, receiver in enumerate(receivers, 1):
-        # Check if the timestep is within the route points length
         if t < len(receiver.route_points):
             position = receiver.get_position_at_time(t)
             ax.scatter(*position, label=f'Receiver {idx}', s=100, c='blue')
@@ -155,7 +154,6 @@ def plot_players_at_time_newversion(t, receivers, best_actions):
         initial_positions = [defender.get_position() for defender in defensive_players]
         defensive_positions = initial_positions
     else:
-        # For t > 0, use the positions from best_actions
         defensive_positions = best_actions[t - 1]  # t - 1 since best_actions starts from t=1
 
     # Plotting defenders
@@ -294,7 +292,11 @@ def main():
         # Display the best action sequence on the main page
         if 'best_actions' in st.session_state and st.session_state.submit:
             st.write("Best action sequence:")
-            st.write(st.session_state.best_actions)
+            # st.write(st.session_state.best_actions)
+
+            for t in range(len(st.session_state.best_actions)):
+                fig = plot_players_at_time_newversion(t, offensive_players, st.session_state.best_actions, defensive_players)
+                st.pyplot(fig)
 
             # for t in range(len(st.session_state.best_actions) ):  # +1 to include initial position at t=0
             #     fig = plot_players_at_time_newversion(t, offensive_players, st.session_state.best_actions)

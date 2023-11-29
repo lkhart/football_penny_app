@@ -6,7 +6,6 @@ shapely == 2.0.2;
 pillow;
 plotly;
 numpy;
-itertools;
 random;
 logging;
 copy;
