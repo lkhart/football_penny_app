@@ -1,20 +1,27 @@
 import streamlit as st
 from streamlit_image_coordinates import streamlit_image_coordinates 
+from sqlalchemy import create_engine
+from urllib.parse import quote
+import requests
+import pymysql
+import utils
+import optimization_logic as ol
+from PIL import Image, ImageDraw
+from io import BytesIO
 
 
 
+### Setup
 
+# load data
 
-# initialize database connection
+test_plays_url = 'https://raw.githubusercontent.com/lkhart/football_penny_app/main/Test_Plays.csv'
 
-conn = st.connection('mysql', type='sql')
+test_play_data = utils.load_data_from_github(test_plays_url)
 
-# test query
-df = conn.query('SELECT * from games limit 10;', ttl=600)
+# st.write(test_play_data)
 
-write(df)
-
-
+# Streamlit App
 
 st.set_page_config(
     page_title="Penny: Football Play Analysis Tool",
@@ -22,58 +29,43 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Streamlit App
+
 st.title("Penny: Football Play Analysis Tool")
 
-# Create two columns
-left_column, right_column = st.columns(2)
+# function draw markers on the field image
+def draw_positions_on_image(image_path, positions):
+    with Image.open(image_path) as img:
+        draw = ImageDraw.Draw(img)
+        marker_size = 10
+        marker_color = 'blue'
 
-# Inputs in the left column
+        for pos in positions:
+            # Assume positions are already scaled to image dimensions
+            x, y = pos
+            draw.ellipse((x - marker_size, y - marker_size, x + marker_size, y + marker_size), fill=marker_color)
 
-def transform_to_field_coordinates(x, y, image_width, image_height):
-    # constants for football field dimensions
-    field_length = 120  # includes end zones, in yards
-    field_width = 53.3  # in yards
+        return img
+    
+def load_image_from_url(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an error for bad status codes
+        return Image.open(BytesIO(response.content))
+    except requests.RequestException as e:
+        st.error(f"Error loading image: {e}")
+        return None
+    
+def draw_positions_on_image(image, positions):
+    draw = ImageDraw.Draw(image)
+    marker_size = 10
+    marker_color = 'blue'
 
-    # Scale coordinates
-    scaled_x = round((x / image_width) * field_length, 1)
-    scaled_y = round((y / image_height) * field_width, 1)
+    for pos in positions:
+        # Assume positions are already scaled to image dimensions
+        x, y = pos
+        draw.ellipse((x - marker_size, y - marker_size, x + marker_size, y + marker_size), fill=marker_color)
 
-    # Calculate positions
-    yard_line_position = scaled_x
-    side_line_position = scaled_y
-
-    return yard_line_position, side_line_position
-
-def get_click_coordinates():
-    img_url = 'https://user-images.githubusercontent.com/97354054/284066828-45296866-70f9-448e-8cc7-b30e24c88490.png'
-
-    # get the click coordinates
-    coordinates = streamlit_image_coordinates(img_url)
-
-    if coordinates:
-        x_coordinate, y_coordinate = coordinates['x'], coordinates['y']
-        return x_coordinate, y_coordinate
-    else:
-        return None, None
-
-# def main():
-
-#     # image dimensions - hardcoded so need to change if replacing image
-#     image_width, image_height = 1140, 520
-
-#     # get x and y coordinates
-#     x_coord, y_coord = get_click_coordinates()
-
-#     # display and convert the coordinates
-#     if x_coord is not None and y_coord is not None:
-#         yard_line, side_line = transform_to_field_coordinates(x_coord, y_coord, image_width, image_height)
-#         # st.write(f"Original Coordinates: X={x_coord}, Y={y_coord}")
-#         st.write(f"Scaled Coordinates: Yard Line={yard_line}, Side Line={side_line}")
-
-# if __name__ == "__main__":
-#     main()
-
+    return image
 
 def main():
     st.title("Defensive Players Position Selector")
@@ -82,36 +74,122 @@ def main():
     if 'player_positions' not in st.session_state:
         st.session_state['player_positions'] = []
 
-    # Define the number of players
+    # Define the number of players and image dimensions
     num_players = st.slider("Select number of defensive players", 1, 11, 1)
+    image_width, image_height = 1140, 520
 
-    # Define image dimensions
-    image_width, image_height = 1140, 520  
+    # Image URL
+    img_url = 'https://user-images.githubusercontent.com/97354054/284066828-45296866-70f9-448e-8cc7-b30e24c88490.png'  # Replace with your image URL
 
-    # Prompt user for each player's position
-    current_player = len(st.session_state['player_positions']) + 1
+    image = load_image_from_url(img_url)
 
-    if current_player <= num_players:
-        st.write(f"Select starting position for player {current_player}.")
+    if image is not None:
+        # Display the image for user interaction
+        # st.image(image, use_column_width=True)
 
-        # User clicks on the image
-        x_coord, y_coord = get_click_coordinates()
+        # Initialize coordinates
+        x_coord, y_coord = None, None
+        
+        # Prompt user for each player's position
+        current_player = len(st.session_state['player_positions']) + 1
+        
+        if current_player <= num_players:
+            st.write(f"Select starting position for player {current_player}.")
+            
+            x_coord, y_coord = utils.get_click_coordinates()
 
         if x_coord is not None and y_coord is not None:
-            yard_line, side_line = transform_to_field_coordinates(x_coord, y_coord, image_width, image_height)
+            yard_line, side_line = utils.transform_to_field_coordinates(x_coord, y_coord, image_width, image_height)
             st.write(f"You selected for player {current_player}: Yard Line={yard_line}, Side Line={side_line}")
 
             if st.button(f'Confirm Position for Player {current_player}'):
                 st.session_state['player_positions'].append((yard_line, side_line))
-    else:
-        st.write("All player positions selected:")
-        for i, position in enumerate(st.session_state['player_positions']):
-            st.write(f"Player {i+1}: {position}")
+        else:
+
+            # Draw the positions on the image
+            if len(st.session_state['player_positions']) == num_players:
+                st.write("All player positions selected:")
+                for i, position in enumerate(st.session_state['player_positions']):
+                    st.write(f"Player {i+1}: {position}")
+                
+                # transform from yard coords to image coords
+                image_positions = [utils.transform_back_to_image_coordinates(pos[0], pos[1], image_width, image_height) for pos in st.session_state['player_positions']]
+                # Convert the image to RGB (to ensure compatibility with ImageDraw)
+                image_rgb = image.convert("RGB")
+                image_with_positions = draw_positions_on_image(image_rgb, image_positions)
+                st.image(image_with_positions, use_column_width=True)
+
+     # Now, get routes for each player
+    if len(st.session_state['player_positions']) == num_players:
+        # Display starting positions
+        image_positions = [utils.transform_back_to_image_coordinates(pos[0], pos[1], image_width, image_height) for pos in st.session_state['player_positions']]
+        image_rgb = image.convert("RGB")
+        image_with_positions = draw_positions_on_image(image_rgb, image_positions)
+        st.image(image_with_positions, use_column_width=True)
+
+        # Initialize routes in session state
+        if 'player_routes' not in st.session_state:
+            st.session_state['player_routes'] = [[] for _ in range(num_players)]
+
+        # Iterate through each player for route selection
+        for player_index in range(num_players):
+            st.write(f"Select route for player {player_index + 1}")
+
+            # Check if route is complete for this player
+            if len(st.session_state['player_routes'][player_index]) < 3:
+                x_coord, y_coord = utils.get_click_coordinates()
+
+                if x_coord is not None and y_coord is not None:
+                    # Append the point to the player's route
+                    st.session_state['player_routes'][player_index].append((x_coord, y_coord))
+
+                    # Draw the route on the image
+                    route_image = draw_positions_on_image(image_with_positions.copy(), st.session_state['player_routes'][player_index])
+                    st.image(route_image, use_column_width=True)
+
+            # Display the selected route
+            st.write(f"Route for Player {player_index + 1}: {st.session_state['player_routes'][player_index]}")
+
 
 if __name__ == "__main__":
     main()
 
 
+# def main():
+#     st.title("Defensive Players Position Selector")
+
+#     # Initialize session states
+#     if 'player_positions' not in st.session_state:
+#         st.session_state['player_positions'] = []
+
+#     # Define the number of players
+#     num_players = st.slider("Select number of defensive players", 1, 11, 1)
+
+#     # Define image dimensions
+#     image_width, image_height = 1140, 520  
+
+#     # Prompt user for each player's position
+#     current_player = len(st.session_state['player_positions']) + 1
+
+#     if current_player <= num_players:
+#         st.write(f"Select starting position for player {current_player}.")
+
+#         # User clicks on the image
+#         x_coord, y_coord = utils.get_click_coordinates()
+
+#         if x_coord is not None and y_coord is not None:
+#             yard_line, side_line = utils.transform_to_field_coordinates(x_coord, y_coord, image_width, image_height)
+#             st.write(f"You selected for player {current_player}: Yard Line={yard_line}, Side Line={side_line}")
+
+#             if st.button(f'Confirm Position for Player {current_player}'):
+#                 st.session_state['player_positions'].append((yard_line, side_line))
+#     else:
+#         st.write("All player positions selected:")
+#         for i, position in enumerate(st.session_state['player_positions']):
+#             st.write(f"Player {i+1}: {position}")
+
+# if __name__ == "__main__":
+#     main()
 
 
 
@@ -130,7 +208,7 @@ st.write("Input the offensive player's speed rating using the slider bar below. 
 offensive_speeds = {}
 
 for i in range(num_pass_catchers):
-    speed = st.slider(f"Speed rating for offensive player {i+1}:", 0, 100)
+    speed = st.slider(f"Speed rating (yards per 0.1 seconds) for offensive player {i+1}:", min_value=0.5, max_value=1.0, step=0.1)
     offensive_speeds[f"Player {i+1}"] = speed
 
 routes = {}
@@ -145,7 +223,7 @@ st.write("Input the defensive player's speed rating using the slider bar below. 
 
 defensive_speeds = {}
 for i in range(num_coverage_players):
-    speed = st.slider(f"Speed rating for defender {i+1}:", 0, 100)
+    speed = st.slider(f"Speed rating (yards per 0.1 seconds) for defensive player {i+1}:", min_value=0.5, max_value=1.0, step=0.1)
     defensive_speeds[f"Defender {i+1}"] = speed
 
 # Weight assignment for defensive positioning

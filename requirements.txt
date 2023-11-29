@@ -1,5 +1,13 @@
-SQLAlchemy
-mysql
-mysqlclient
-streamlit-image-coordinates
-
+SQLAlchemy == 2.0.23;
+mysql;
+mysqlclient == 2.2.0;
+mysql-connector-python;
+streamlit-image-coordinates;
+pymysql;
+pandas;
+requests;
+io;
+matplotlib;
+scipy;
+shapely;
+pillow;
