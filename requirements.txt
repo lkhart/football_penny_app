@@ -8,5 +8,5 @@ pandas;
 requests;
 matplotlib;
 scipy;
-shapely;
+shapely == 2.0.2;
 pillow;
