@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import concurrent
 import pandas as pd
 import plotly.graph_objects as go
-from by_second import OffensivePlayer, DefensivePlayer, GameState, find_best_path_bfs, plot_players_at_time
+from by_second import OffensivePlayer, DefensivePlayer, GameState, find_best_path_bfs
 
 
 # Initialize session state
@@ -141,7 +141,37 @@ def format_and_create_offensive_players():
             offensive_players.append(offensive_player)
     return offensive_players
 
+def plot_players_at_time_newversion(t, receivers, best_actions):
+    fig, ax = plt.subplots(figsize=(8, 5))
+    # Plotting receivers
+    for idx, receiver in enumerate(receivers, 1):
+        # Check if the timestep is within the route points length
+        if t < len(receiver.route_points):
+            position = receiver.get_position_at_time(t)
+            ax.scatter(*position, label=f'Receiver {idx}', s=100, c='blue')
 
+    # Append initial positions of defenders for t=0
+    if t == 0:
+        initial_positions = [defender.get_position() for defender in defensive_players]
+        defensive_positions = initial_positions
+    else:
+        # For t > 0, use the positions from best_actions
+        defensive_positions = best_actions[t - 1]  # t - 1 since best_actions starts from t=1
+
+    # Plotting defenders
+    for defender_idx, position in enumerate(defensive_positions, 1):
+        ax.scatter(*position, label=f'Defender {defender_idx}', s=100, c='red', marker='^')
+
+    ax.set_xlim([-30, 30])
+    ax.set_ylim([0, 100])
+    ax.axhline(y=0, color='grey', linestyle='--')
+    ax.axvline(x=6.1, color='grey', linestyle='--')
+    ax.axvline(x=-6.1, color='grey', linestyle='--')
+    ax.set_title(f"Players' positions at t={t} seconds")
+    ax.set_aspect('equal', adjustable='box')
+    ax.legend(loc='upper left')
+
+    return fig
 
 # Main app
 def main():
@@ -266,10 +296,13 @@ def main():
             st.write("Best action sequence:")
             st.write(st.session_state.best_actions)
 
+            for t in range(len(st.session_state.best_actions) ):  # +1 to include initial position at t=0
+                fig = plot_players_at_time_newversion(t, offensive_players, st.session_state.best_actions)
+                st.pyplot(fig)
 
 
-        # Additional inputs or functionality for the next step
-        # ...
+
+    
 
 if __name__ == "__main__":
     main()
