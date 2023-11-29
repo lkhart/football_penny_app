@@ -296,9 +296,9 @@ def main():
             st.write("Best action sequence:")
             st.write(st.session_state.best_actions)
 
-            for t in range(len(st.session_state.best_actions) ):  # +1 to include initial position at t=0
-                fig = plot_players_at_time_newversion(t, offensive_players, st.session_state.best_actions)
-                st.pyplot(fig)
+            # for t in range(len(st.session_state.best_actions) ):  # +1 to include initial position at t=0
+            #     fig = plot_players_at_time_newversion(t, offensive_players, st.session_state.best_actions)
+            #     st.pyplot(fig)
 
 
 
