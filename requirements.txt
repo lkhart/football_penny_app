@@ -7,7 +7,6 @@ shapely == 2.0.2;
 pillow;
 plotly;
 numpy;
-logging;
 copy;
 collections;
 multiprocessing;
